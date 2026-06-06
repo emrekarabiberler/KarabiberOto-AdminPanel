@@ -259,6 +259,9 @@
                 async fetchProducts() {
                     try {
                         const response = await fetch(`${API_BASE_URL}/products/`);
+                        if (!response.ok) {
+                            throw new Error(await response.text());
+                        }
                         this.products = await response.json();
                     } catch (error) {
                         console.error('Ürünler yüklenemedi:', error);
@@ -271,13 +274,16 @@
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(this.newProduct)
                         });
+                        if (!response.ok) {
+                            throw new Error(await response.text());
+                        }
                         if (response.ok) {
                             await this.fetchProducts();
                             this.showModal = false;
                             this.resetForm();
                         }
                     } catch (error) {
-                        alert('Ürün kaydedilirken bir hata oluştu.');
+                        alert(`Ürün kaydedilirken bir hata oluştu: ${error.message}`);
                     }
                 },
                 resetForm() {
