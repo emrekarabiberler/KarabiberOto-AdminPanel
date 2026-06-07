@@ -72,6 +72,16 @@
                     </svg>
                     <span class="font-medium">Ürünler</span>
                 </a>
+                <a @click="view = 'categories'"
+                    :class="view === 'categories' ? 'sidebar-item-active text-white' : 'text-slate-400 hover:text-white'"
+                    class="flex items-center space-x-3 p-3 rounded-xl transition-all cursor-pointer group">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z">
+                        </path>
+                    </svg>
+                    <span class="font-medium">Kategoriler</span>
+                </a>
                 <a @click="view = 'ai'"
                     :class="view === 'ai' ? 'sidebar-item-active text-white' : 'text-slate-400 hover:text-white'"
                     class="flex items-center space-x-3 p-3 rounded-xl transition-all cursor-pointer group">
@@ -101,6 +111,7 @@
                 <div>
                     <h2 class="text-3xl font-bold" v-if="view === 'dashboard'">Hoş Geldiniz, Admin</h2>
                     <h2 class="text-3xl font-bold" v-if="view === 'products'">Ürün Yönetimi</h2>
+                    <h2 class="text-3xl font-bold" v-if="view === 'categories'">Kategori Yönetimi</h2>
                     <h2 class="text-3xl font-bold" v-if="view === 'ai'">AI Laboratuvarı</h2>
                     <p class="text-slate-400 mt-1">KarabiberOto tüm sistem kontrolü buradadır.</p>
                 </div>
@@ -110,6 +121,13 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                     </svg>
                     <span>Yeni Ürün</span>
+                </button>
+                <button v-if="view === 'categories'" @click="showCategoryModal = true"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-semibold transition-all shadow-lg shadow-blue-900/20 flex items-center space-x-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    <span>Yeni Kategori</span>
                 </button>
             </header>
 
@@ -125,6 +143,18 @@
                     </div>
                     <div class="text-4xl font-bold mb-1">{{ products.length }}</div>
                     <div class="text-slate-500 font-medium tracking-wide">Kayıtlı Ürün</div>
+                </div>
+                <div class="glass p-8 rounded-3xl group hover:border-blue-500/50 transition-all">
+                    <div
+                        class="w-12 h-12 bg-purple-500/20 text-purple-400 rounded-2xl flex items-center justify-center mb-4">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z">
+                            </path>
+                        </svg>
+                    </div>
+                    <div class="text-4xl font-bold mb-1">{{ categories.length }}</div>
+                    <div class="text-slate-500 font-medium tracking-wide">Kayıtlı Kategori</div>
                 </div>
                 <!-- More stats can be added -->
             </div>
@@ -178,6 +208,40 @@
                     </tbody>
                 </table>
             </div>
+
+            <!-- Categories View -->
+            <div v-if="view === 'categories'" class="glass rounded-3xl overflow-hidden border-none shadow-2xl">
+                <table class="w-full text-left">
+                    <thead class="bg-slate-800/50 border-b border-slate-700">
+                        <tr>
+                            <th class="p-6 font-semibold text-slate-300">Kategori</th>
+                            <th class="p-6 font-semibold text-slate-300">ID</th>
+                            <th class="p-6 font-semibold text-slate-300">İkon</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-700/50">
+                        <tr v-for="category in categories" :key="category.id"
+                            class="hover:bg-slate-700/20 transition-all">
+                            <td class="p-6">
+                                <div class="flex items-center space-x-4">
+                                    <div
+                                        class="w-12 h-12 rounded-xl bg-slate-700 flex-shrink-0 flex items-center justify-center overflow-hidden">
+                                        <img v-if="category.image_url" :src="category.image_url"
+                                            class="object-cover w-full h-full">
+                                        <div v-else class="text-xl text-slate-400">#</div>
+                                    </div>
+                                    <div class="font-bold text-slate-100">{{ category.name }}</div>
+                                </div>
+                            </td>
+                            <td class="p-6 font-mono text-xs text-slate-500">{{ category.id }}</td>
+                            <td class="p-6 text-slate-300">{{ category.icon || 'tag.fill' }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div v-if="categories.length === 0" class="p-10 text-center text-slate-500">
+                    Henüz kategori yok. Yeni kategori ekleyerek başlayın.
+                </div>
+            </div>
         </main>
 
         <!-- New Product Modal -->
@@ -215,7 +279,8 @@
                             </div>
                             <div>
                                 <div class="font-semibold text-slate-200">Fotoğraf seç</div>
-                                <div class="text-sm text-slate-500">JPG veya PNG seçebilirsiniz. Görsel ürün kaydına eklenir.</div>
+                                <div class="text-sm text-slate-500">JPG veya PNG seçebilirsiniz. Görsel ürün kaydına
+                                    eklenir.</div>
                             </div>
                             <input type="file" accept="image/*" class="hidden" @change="handleImageSelect">
                         </label>
@@ -229,9 +294,10 @@
                         <label class="block text-sm font-semibold text-slate-400 mb-2">Kategori</label>
                         <select v-model="newProduct.category_id"
                             class="w-full bg-slate-800/50 border border-slate-700 rounded-2xl p-4 focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none">
-                            <option value="interior">İç Cephe</option>
-                            <option value="exterior">Dış Cephe</option>
-                            <option value="primer">Astarlar</option>
+                            <option value="" disabled>Kategori seçin</option>
+                            <option v-for="category in categories" :key="category.id" :value="category.id">
+                                {{ category.name }}
+                            </option>
                         </select>
                     </div>
                     <div class="col-span-2">
@@ -254,6 +320,53 @@
                 </form>
             </div>
         </div>
+
+        <!-- New Category Modal -->
+        <div v-if="showCategoryModal"
+            class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6">
+            <div class="glass w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-[40px] p-10 relative shadow-2xl">
+                <button @click="showCategoryModal = false"
+                    class="absolute top-6 right-6 p-2 hover:bg-slate-700 rounded-full transition-all">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l18 18">
+                        </path>
+                    </svg>
+                </button>
+                <h3 class="text-2xl font-bold mb-8">Yeni Kategori Ekle</h3>
+                <form @submit.prevent="saveCategory" class="grid grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-400 mb-2">Kategori ID</label>
+                        <input v-model="newCategory.id" type="text" required
+                            class="w-full bg-slate-800/50 border border-slate-700 rounded-2xl p-4 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                            placeholder="kaporta">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-400 mb-2">Kategori Adı</label>
+                        <input v-model="newCategory.name" type="text" required
+                            class="w-full bg-slate-800/50 border border-slate-700 rounded-2xl p-4 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                            placeholder="Kaporta">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-400 mb-2">İkon</label>
+                        <input v-model="newCategory.icon" type="text"
+                            class="w-full bg-slate-800/50 border border-slate-700 rounded-2xl p-4 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                            placeholder="car.fill">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-400 mb-2">Görsel URL</label>
+                        <input v-model="newCategory.image_url" type="url"
+                            class="w-full bg-slate-800/50 border border-slate-700 rounded-2xl p-4 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                            placeholder="https://...">
+                    </div>
+                    <div class="col-span-2 mt-4">
+                        <button type="submit"
+                            class="w-full bg-blue-600 hover:bg-blue-700 text-white p-5 rounded-2xl font-bold transition-all shadow-xl shadow-blue-600/20">
+                            Kategoriyi Kaydet
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -265,12 +378,20 @@
                 return {
                     view: 'dashboard',
                     showModal: false,
+                    showCategoryModal: false,
                     products: [],
+                    categories: [],
                     selectedImageFile: null,
+                    newCategory: {
+                        id: '',
+                        name: '',
+                        icon: 'tag.fill',
+                        image_url: ''
+                    },
                     newProduct: {
                         name: '',
                         price: 0,
-                        category_id: 'interior',
+                        category_id: '',
                         description: '',
                         image_url: '',
                         grade: '',
@@ -282,6 +403,7 @@
                 }
             },
             mounted() {
+                this.fetchCategories();
                 this.fetchProducts();
             },
             methods: {
@@ -296,8 +418,28 @@
                         console.error('Ürünler yüklenemedi:', error);
                     }
                 },
+                async fetchCategories() {
+                    try {
+                        const response = await fetch(`${API_BASE_URL}/products/categories`);
+                        if (!response.ok) {
+                            throw new Error(await response.text());
+                        }
+                        this.categories = await response.json();
+                        if (!this.newProduct.category_id && this.categories.length > 0) {
+                            this.newProduct.category_id = this.categories[0].id;
+                            this.newProduct.product_type = this.categories[0].id;
+                        }
+                    } catch (error) {
+                        console.error('Kategoriler yüklenemedi:', error);
+                    }
+                },
                 async saveProduct() {
                     try {
+                        if (!this.newProduct.category_id) {
+                            alert('Ürün eklemek için önce kategori seçin veya yeni kategori ekleyin.');
+                            return;
+                        }
+
                         this.newProduct.product_type = this.newProduct.category_id;
 
                         if (this.selectedImageFile) {
@@ -320,6 +462,38 @@
                     } catch (error) {
                         alert(`Ürün kaydedilirken bir hata oluştu: ${error.message}`);
                     }
+                },
+                async saveCategory() {
+                    try {
+                        this.newCategory.id = this.slugify(this.newCategory.id || this.newCategory.name);
+                        const response = await fetch(`${API_BASE_URL}/products/categories`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(this.newCategory)
+                        });
+                        if (!response.ok) {
+                            throw new Error(await response.text());
+                        }
+                        await this.fetchCategories();
+                        this.showCategoryModal = false;
+                        this.resetCategoryForm();
+                    } catch (error) {
+                        alert(`Kategori kaydedilirken bir hata oluştu: ${error.message}`);
+                    }
+                },
+                slugify(value) {
+                    return value
+                        .toString()
+                        .trim()
+                        .toLowerCase()
+                        .replace(/ğ/g, 'g')
+                        .replace(/ü/g, 'u')
+                        .replace(/ş/g, 's')
+                        .replace(/ı/g, 'i')
+                        .replace(/ö/g, 'o')
+                        .replace(/ç/g, 'c')
+                        .replace(/[^a-z0-9]+/g, '-')
+                        .replace(/^-+|-+$/g, '');
                 },
                 handleImageSelect(event) {
                     const file = event.target.files?.[0];
@@ -361,9 +535,17 @@
                 resetForm() {
                     this.selectedImageFile = null;
                     this.newProduct = {
-                        name: '', price: 0, category_id: 'interior', description: '',
+                        name: '', price: 0, category_id: this.categories[0]?.id || '', description: '',
                         image_url: '', grade: '', color_hex: '#FFFFFF',
-                        product_type: 'interior', barcode: '', in_stock: true
+                        product_type: this.categories[0]?.id || '', barcode: '', in_stock: true
+                    };
+                },
+                resetCategoryForm() {
+                    this.newCategory = {
+                        id: '',
+                        name: '',
+                        icon: 'tag.fill',
+                        image_url: ''
                     };
                 }
             }
