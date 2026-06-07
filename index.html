@@ -115,7 +115,7 @@
                     <h2 class="text-3xl font-bold" v-if="view === 'ai'">AI Laboratuvarı</h2>
                     <p class="text-slate-400 mt-1">KarabiberOto tüm sistem kontrolü buradadır.</p>
                 </div>
-                <button v-if="view === 'products'" @click="showModal = true"
+                <button v-if="view === 'products'" @click="openNewProductModal"
                     class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-semibold transition-all shadow-lg shadow-blue-900/20 flex items-center space-x-2">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
@@ -172,7 +172,7 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-700/50">
-                        <tr v-for="product in products" :key="product.id"
+                        <tr v-for="product in products" :key="getProductId(product)"
                             class="hover:bg-slate-700/20 transition-all group">
                             <td class="p-6">
                                 <div class="flex items-center space-x-4">
@@ -184,7 +184,7 @@
                                     </div>
                                     <div>
                                         <div class="font-bold text-slate-100">{{ product.name }}</div>
-                                        <div class="text-xs text-slate-500 font-mono tracking-tight">{{ product.id }}
+                                        <div class="text-xs text-slate-500 font-mono tracking-tight">{{ getProductId(product) }}
                                         </div>
                                     </div>
                                 </div>
@@ -195,11 +195,19 @@
                             <td class="p-6 font-bold text-blue-400">₺{{ product.price }}</td>
                             <td class="p-6"><span class="text-green-500 font-medium">Mevcut</span></td>
                             <td class="p-6">
-                                <button
+                                <button @click="editProduct(product)"
                                     class="p-2 hover:bg-slate-700 rounded-lg transition-all text-slate-400 hover:text-white">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z">
+                                        </path>
+                                    </svg>
+                                </button>
+                                <button @click="deleteProduct(product)"
+                                    class="p-2 hover:bg-slate-700 rounded-lg transition-all text-slate-400 hover:text-red-400 ml-2">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m2 0H7m3-3h4a1 1 0 011 1v2H9V5a1 1 0 011-1z">
                                         </path>
                                     </svg>
                                 </button>
@@ -269,14 +277,14 @@
         <div v-if="showModal"
             class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6">
             <div class="glass w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-[40px] p-10 relative shadow-2xl">
-                <button @click="showModal = false"
+                <button @click="closeProductModal"
                     class="absolute top-6 right-6 p-2 hover:bg-slate-700 rounded-full transition-all">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l18 18">
                         </path>
                     </svg>
                 </button>
-                <h3 class="text-2xl font-bold mb-8">Yeni Ürün Ekle</h3>
+                <h3 class="text-2xl font-bold mb-8">{{ editingProductId ? 'Ürün Düzenle' : 'Yeni Ürün Ekle' }}</h3>
                 <form @submit.prevent="saveProduct" class="grid grid-cols-2 gap-6">
                     <div class="col-span-2">
                         <label class="block text-sm font-semibold text-slate-400 mb-2">Ürün Adı</label>
@@ -335,8 +343,9 @@
                     </div>
                     <div class="col-span-2 mt-4">
                         <button type="submit"
-                            class="w-full bg-blue-600 hover:bg-blue-700 text-white p-5 rounded-2xl font-bold transition-all shadow-xl shadow-blue-600/20">Ürünü
-                            Kaydet</button>
+                            class="w-full bg-blue-600 hover:bg-blue-700 text-white p-5 rounded-2xl font-bold transition-all shadow-xl shadow-blue-600/20">
+                            {{ editingProductId ? 'Ürünü Güncelle' : 'Ürünü Kaydet' }}
+                        </button>
                     </div>
                 </form>
             </div>
@@ -412,6 +421,7 @@
                     categories: [],
                     selectedImageFile: null,
                     selectedCategoryImageFile: null,
+                    editingProductId: null,
                     editingCategoryId: null,
                     newCategory: {
                         name: '',
@@ -475,22 +485,88 @@
                             this.newProduct.image_url = await this.uploadImageToCloudinary();
                         }
 
-                        const response = await fetch(`${API_BASE_URL}/products/`, {
-                            method: 'POST',
+                        const url = this.editingProductId
+                            ? `${API_BASE_URL}/products/${this.editingProductId}`
+                            : `${API_BASE_URL}/products/`;
+                        const productPayload = {
+                            name: this.newProduct.name,
+                            price: Number(this.newProduct.price) || 0,
+                            category_id: this.newProduct.category_id,
+                            description: this.newProduct.description || '',
+                            image_url: this.newProduct.image_url || '',
+                            grade: this.newProduct.grade || '',
+                            color_hex: this.newProduct.color_hex || '#FFFFFF',
+                            product_type: this.newProduct.category_id,
+                            barcode: this.newProduct.barcode || null,
+                            in_stock: this.newProduct.in_stock !== false
+                        };
+
+                        const response = await fetch(url, {
+                            method: this.editingProductId ? 'PUT' : 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(this.newProduct)
+                            body: JSON.stringify(productPayload)
                         });
                         if (!response.ok) {
-                            throw new Error(await response.text());
+                            throw new Error(await this.getErrorMessage(response));
                         }
                         if (response.ok) {
                             await this.fetchProducts();
-                            this.showModal = false;
-                            this.resetForm();
+                            this.closeProductModal();
                         }
                     } catch (error) {
-                        alert(`Ürün kaydedilirken bir hata oluştu: ${error.message}`);
+                        alert(`Ürün kaydedilirken bir hata oluştu: ${this.getNetworkErrorMessage(error)}`);
                     }
+                },
+                openNewProductModal() {
+                    this.resetForm();
+                    this.showModal = true;
+                },
+                editProduct(product) {
+                    this.editingProductId = this.getProductId(product);
+                    this.selectedImageFile = null;
+                    this.newProduct = {
+                        name: product.name || '',
+                        price: Number(product.price) || 0,
+                        category_id: product.category_id || this.categories[0]?.id || '',
+                        description: product.description || '',
+                        image_url: product.image_url || '',
+                        grade: product.grade || '',
+                        color_hex: product.color_hex || '#FFFFFF',
+                        product_type: product.product_type || product.category_id || '',
+                        barcode: product.barcode || '',
+                        in_stock: product.in_stock !== false
+                    };
+                    this.showModal = true;
+                },
+                async deleteProduct(product) {
+                    const productId = this.getProductId(product);
+                    if (!productId) {
+                        alert('Ürün ID bulunamadı.');
+                        return;
+                    }
+
+                    if (!confirm(`${product.name} ürünü silinsin mi?`)) {
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(`${API_BASE_URL}/products/${productId}`, {
+                            method: 'DELETE'
+                        });
+                        if (!response.ok) {
+                            throw new Error(await this.getErrorMessage(response));
+                        }
+                        await this.fetchProducts();
+                    } catch (error) {
+                        alert(`Ürün silinirken bir hata oluştu: ${this.getNetworkErrorMessage(error)}`);
+                    }
+                },
+                closeProductModal() {
+                    this.showModal = false;
+                    this.resetForm();
+                },
+                getProductId(product) {
+                    return product.id || product._id || '';
                 },
                 async saveCategory() {
                     try {
@@ -655,6 +731,7 @@
                 },
                 resetForm() {
                     this.selectedImageFile = null;
+                    this.editingProductId = null;
                     this.newProduct = {
                         name: '', price: 0, category_id: this.categories[0]?.id || '', description: '',
                         image_url: '', grade: '', color_hex: '#FFFFFF',
