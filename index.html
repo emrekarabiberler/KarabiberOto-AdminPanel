@@ -122,7 +122,7 @@
                     </svg>
                     <span>Yeni Ürün</span>
                 </button>
-                <button v-if="view === 'categories'" @click="showCategoryModal = true"
+                <button v-if="view === 'categories'" @click="openNewCategoryModal"
                     class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-semibold transition-all shadow-lg shadow-blue-900/20 flex items-center space-x-2">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
@@ -216,6 +216,7 @@
                         <tr>
                             <th class="p-6 font-semibold text-slate-300">Kategori</th>
                             <th class="p-6 font-semibold text-slate-300">ID</th>
+                            <th class="p-6 font-semibold text-slate-300 text-right">İşlemler</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-700/50">
@@ -233,6 +234,28 @@
                                 </div>
                             </td>
                             <td class="p-6 font-mono text-xs text-slate-500">{{ category.id }}</td>
+                            <td class="p-6">
+                                <div class="flex items-center justify-end gap-3">
+                                    <button @click="editCategory(category)"
+                                        class="p-2 hover:bg-slate-700 rounded-xl text-slate-400 hover:text-blue-400 transition-all"
+                                        title="Düzenle">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z">
+                                            </path>
+                                        </svg>
+                                    </button>
+                                    <button @click="deleteCategory(category)"
+                                        class="p-2 hover:bg-slate-700 rounded-xl text-slate-400 hover:text-red-400 transition-all"
+                                        title="Sil">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m2 0H7m3-3h4a1 1 0 011 1v2H9V5a1 1 0 011-1z">
+                                            </path>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </td>
                         </tr>
                     </tbody>
                 </table>
@@ -323,14 +346,14 @@
         <div v-if="showCategoryModal"
             class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6">
             <div class="glass w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-[40px] p-10 relative shadow-2xl">
-                <button @click="showCategoryModal = false"
+                <button @click="closeCategoryModal"
                     class="absolute top-6 right-6 p-2 hover:bg-slate-700 rounded-full transition-all">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l18 18">
                         </path>
                     </svg>
                 </button>
-                <h3 class="text-2xl font-bold mb-8">Yeni Kategori Ekle</h3>
+                <h3 class="text-2xl font-bold mb-8">{{ editingCategoryId ? 'Kategori Düzenle' : 'Yeni Kategori Ekle' }}</h3>
                 <form @submit.prevent="saveCategory" class="grid grid-cols-2 gap-6">
                     <div class="col-span-2">
                         <label class="block text-sm font-semibold text-slate-400 mb-2">Kategori Adı</label>
@@ -365,7 +388,7 @@
                     <div class="col-span-2 mt-4">
                         <button type="submit"
                             class="w-full bg-blue-600 hover:bg-blue-700 text-white p-5 rounded-2xl font-bold transition-all shadow-xl shadow-blue-600/20">
-                            Kategoriyi Kaydet
+                            {{ editingCategoryId ? 'Kategoriyi Güncelle' : 'Kategoriyi Kaydet' }}
                         </button>
                     </div>
                 </form>
@@ -387,6 +410,7 @@
                     categories: [],
                     selectedImageFile: null,
                     selectedCategoryImageFile: null,
+                    editingCategoryId: null,
                     newCategory: {
                         name: '',
                         image_url: ''
@@ -472,8 +496,12 @@
                             this.newCategory.image_url = await this.uploadCategoryImageToCloudinary();
                         }
 
-                        const response = await fetch(`${API_BASE_URL}/products/categories`, {
-                            method: 'POST',
+                        const url = this.editingCategoryId
+                            ? `${API_BASE_URL}/products/categories/${this.editingCategoryId}`
+                            : `${API_BASE_URL}/products/categories`;
+
+                        const response = await fetch(url, {
+                            method: this.editingCategoryId ? 'PUT' : 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(this.newCategory)
                         });
@@ -481,11 +509,49 @@
                             throw new Error(await response.text());
                         }
                         await this.fetchCategories();
-                        this.showCategoryModal = false;
-                        this.resetCategoryForm();
+                        this.closeCategoryModal();
                     } catch (error) {
                         alert(`Kategori kaydedilirken bir hata oluştu: ${error.message}`);
                     }
+                },
+                openNewCategoryModal() {
+                    this.resetCategoryForm();
+                    this.showCategoryModal = true;
+                },
+                editCategory(category) {
+                    this.editingCategoryId = category.id;
+                    this.selectedCategoryImageFile = null;
+                    this.newCategory = {
+                        name: category.name,
+                        image_url: category.image_url || ''
+                    };
+                    this.showCategoryModal = true;
+                },
+                async deleteCategory(category) {
+                    if (!confirm(`${category.name} kategorisi silinsin mi? Bu kategoriye bağlı ürünler kategorisiz kalır.`)) {
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(`${API_BASE_URL}/products/categories/${category.id}`, {
+                            method: 'DELETE'
+                        });
+                        if (!response.ok) {
+                            throw new Error(await response.text());
+                        }
+                        await this.fetchCategories();
+                        await this.fetchProducts();
+                        if (this.newProduct.category_id === category.id) {
+                            this.newProduct.category_id = this.categories[0]?.id || '';
+                            this.newProduct.product_type = this.newProduct.category_id;
+                        }
+                    } catch (error) {
+                        alert(`Kategori silinirken bir hata oluştu: ${error.message}`);
+                    }
+                },
+                closeCategoryModal() {
+                    this.showCategoryModal = false;
+                    this.resetCategoryForm();
                 },
                 handleImageSelect(event) {
                     const file = event.target.files?.[0];
@@ -576,6 +642,7 @@
                 },
                 resetCategoryForm() {
                     this.selectedCategoryImageFile = null;
+                    this.editingCategoryId = null;
                     this.newCategory = {
                         name: '',
                         image_url: ''
