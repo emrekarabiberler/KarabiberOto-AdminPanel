@@ -216,7 +216,6 @@
                         <tr>
                             <th class="p-6 font-semibold text-slate-300">Kategori</th>
                             <th class="p-6 font-semibold text-slate-300">ID</th>
-                            <th class="p-6 font-semibold text-slate-300">İkon</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-700/50">
@@ -234,7 +233,6 @@
                                 </div>
                             </td>
                             <td class="p-6 font-mono text-xs text-slate-500">{{ category.id }}</td>
-                            <td class="p-6 text-slate-300">{{ category.icon || 'tag.fill' }}</td>
                         </tr>
                     </tbody>
                 </table>
@@ -334,29 +332,35 @@
                 </button>
                 <h3 class="text-2xl font-bold mb-8">Yeni Kategori Ekle</h3>
                 <form @submit.prevent="saveCategory" class="grid grid-cols-2 gap-6">
-                    <div>
-                        <label class="block text-sm font-semibold text-slate-400 mb-2">Kategori ID</label>
-                        <input v-model="newCategory.id" type="text" required
-                            class="w-full bg-slate-800/50 border border-slate-700 rounded-2xl p-4 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                            placeholder="kaporta">
-                    </div>
-                    <div>
+                    <div class="col-span-2">
                         <label class="block text-sm font-semibold text-slate-400 mb-2">Kategori Adı</label>
                         <input v-model="newCategory.name" type="text" required
                             class="w-full bg-slate-800/50 border border-slate-700 rounded-2xl p-4 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                             placeholder="Kaporta">
                     </div>
-                    <div>
-                        <label class="block text-sm font-semibold text-slate-400 mb-2">İkon</label>
-                        <input v-model="newCategory.icon" type="text"
-                            class="w-full bg-slate-800/50 border border-slate-700 rounded-2xl p-4 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                            placeholder="car.fill">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-semibold text-slate-400 mb-2">Görsel URL</label>
-                        <input v-model="newCategory.image_url" type="url"
-                            class="w-full bg-slate-800/50 border border-slate-700 rounded-2xl p-4 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                            placeholder="https://...">
+                    <div class="col-span-2">
+                        <label class="block text-sm font-semibold text-slate-400 mb-2">Kategori Fotoğrafı</label>
+                        <label
+                            class="flex items-center gap-4 bg-slate-800/50 border border-dashed border-slate-600 rounded-2xl p-4 cursor-pointer hover:border-blue-500 transition-all"
+                            @dragover.prevent
+                            @drop.prevent="handleCategoryImageDrop">
+                            <div
+                                class="w-24 h-24 rounded-2xl bg-slate-900/70 flex-shrink-0 flex items-center justify-center overflow-hidden">
+                                <img v-if="newCategory.image_url" :src="newCategory.image_url"
+                                    class="object-cover w-full h-full">
+                                <svg v-else class="w-8 h-8 text-slate-500" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z">
+                                    </path>
+                                </svg>
+                            </div>
+                            <div>
+                                <div class="font-semibold text-slate-200">Fotoğrafı sürükle bırak veya seç</div>
+                                <div class="text-sm text-slate-500">Görsel Cloudinary'ye yüklenip kategoriye bağlanır.</div>
+                            </div>
+                            <input type="file" accept="image/*" class="hidden" @change="handleCategoryImageSelect">
+                        </label>
                     </div>
                     <div class="col-span-2 mt-4">
                         <button type="submit"
@@ -382,10 +386,9 @@
                     products: [],
                     categories: [],
                     selectedImageFile: null,
+                    selectedCategoryImageFile: null,
                     newCategory: {
-                        id: '',
                         name: '',
-                        icon: 'tag.fill',
                         image_url: ''
                     },
                     newProduct: {
@@ -465,7 +468,10 @@
                 },
                 async saveCategory() {
                     try {
-                        this.newCategory.id = this.slugify(this.newCategory.id || this.newCategory.name);
+                        if (this.selectedCategoryImageFile) {
+                            this.newCategory.image_url = await this.uploadCategoryImageToCloudinary();
+                        }
+
                         const response = await fetch(`${API_BASE_URL}/products/categories`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -480,20 +486,6 @@
                     } catch (error) {
                         alert(`Kategori kaydedilirken bir hata oluştu: ${error.message}`);
                     }
-                },
-                slugify(value) {
-                    return value
-                        .toString()
-                        .trim()
-                        .toLowerCase()
-                        .replace(/ğ/g, 'g')
-                        .replace(/ü/g, 'u')
-                        .replace(/ş/g, 's')
-                        .replace(/ı/g, 'i')
-                        .replace(/ö/g, 'o')
-                        .replace(/ç/g, 'c')
-                        .replace(/[^a-z0-9]+/g, '-')
-                        .replace(/^-+|-+$/g, '');
                 },
                 handleImageSelect(event) {
                     const file = event.target.files?.[0];
@@ -516,11 +508,53 @@
                     };
                     reader.readAsDataURL(file);
                 },
+                handleCategoryImageSelect(event) {
+                    this.prepareCategoryImage(event.target.files?.[0], event.target);
+                },
+                handleCategoryImageDrop(event) {
+                    this.prepareCategoryImage(event.dataTransfer.files?.[0]);
+                },
+                prepareCategoryImage(file, input) {
+                    if (!file) return;
+
+                    if (!file.type.startsWith('image/')) {
+                        alert('Lütfen bir görsel dosyası seçin.');
+                        if (input) input.value = '';
+                        return;
+                    }
+
+                    this.selectedCategoryImageFile = file;
+
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        this.newCategory.image_url = reader.result;
+                    };
+                    reader.onerror = () => {
+                        alert('Fotoğraf okunamadı.');
+                    };
+                    reader.readAsDataURL(file);
+                },
                 async uploadImageToCloudinary() {
                     const formData = new FormData();
                     formData.append('file', this.selectedImageFile);
 
                     const response = await fetch(`${API_BASE_URL}/products/upload-image`, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(await response.text());
+                    }
+
+                    const result = await response.json();
+                    return result.url;
+                },
+                async uploadCategoryImageToCloudinary() {
+                    const formData = new FormData();
+                    formData.append('file', this.selectedCategoryImageFile);
+
+                    const response = await fetch(`${API_BASE_URL}/products/categories/upload-image`, {
                         method: 'POST',
                         body: formData
                     });
@@ -541,10 +575,9 @@
                     };
                 },
                 resetCategoryForm() {
+                    this.selectedCategoryImageFile = null;
                     this.newCategory = {
-                        id: '',
                         name: '',
-                        icon: 'tag.fill',
                         image_url: ''
                     };
                 }
