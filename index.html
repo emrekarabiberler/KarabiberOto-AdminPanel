@@ -82,6 +82,16 @@
                     </svg>
                     <span class="font-medium">Kategoriler</span>
                 </a>
+                <a @click="view = 'users'"
+                    :class="view === 'users' ? 'sidebar-item-active text-white' : 'text-slate-400 hover:text-white'"
+                    class="flex items-center space-x-3 p-3 rounded-xl transition-all cursor-pointer group">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17 20h5v-2a4 4 0 00-4-4h-1M9 20H4v-2a4 4 0 014-4h1m0-4a4 4 0 100-8 4 4 0 000 8zm8 0a4 4 0 100-8 4 4 0 000 8z">
+                        </path>
+                    </svg>
+                    <span class="font-medium">Kullanıcılar</span>
+                </a>
                 <a @click="view = 'ai'"
                     :class="view === 'ai' ? 'sidebar-item-active text-white' : 'text-slate-400 hover:text-white'"
                     class="flex items-center space-x-3 p-3 rounded-xl transition-all cursor-pointer group">
@@ -112,6 +122,7 @@
                     <h2 class="text-3xl font-bold" v-if="view === 'dashboard'">Hoş Geldiniz, Admin</h2>
                     <h2 class="text-3xl font-bold" v-if="view === 'products'">Ürün Yönetimi</h2>
                     <h2 class="text-3xl font-bold" v-if="view === 'categories'">Kategori Yönetimi</h2>
+                    <h2 class="text-3xl font-bold" v-if="view === 'users'">Kullanıcı Yönetimi</h2>
                     <h2 class="text-3xl font-bold" v-if="view === 'ai'">AI Laboratuvarı</h2>
                     <p class="text-slate-400 mt-1">KarabiberOto tüm sistem kontrolü buradadır.</p>
                 </div>
@@ -156,7 +167,18 @@
                     <div class="text-4xl font-bold mb-1">{{ categories.length }}</div>
                     <div class="text-slate-500 font-medium tracking-wide">Kayıtlı Kategori</div>
                 </div>
-                <!-- More stats can be added -->
+                <div class="glass p-8 rounded-3xl group hover:border-blue-500/50 transition-all">
+                    <div
+                        class="w-12 h-12 bg-emerald-500/20 text-emerald-400 rounded-2xl flex items-center justify-center mb-4">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 20h5v-2a4 4 0 00-4-4h-1M9 20H4v-2a4 4 0 014-4h1m0-4a4 4 0 100-8 4 4 0 000 8zm8 0a4 4 0 100-8 4 4 0 000 8z">
+                            </path>
+                        </svg>
+                    </div>
+                    <div class="text-4xl font-bold mb-1">{{ users.length }}</div>
+                    <div class="text-slate-500 font-medium tracking-wide">Kayıtlı Kullanıcı</div>
+                </div>
             </div>
 
             <!-- Products View -->
@@ -269,6 +291,40 @@
                 </table>
                 <div v-if="categories.length === 0" class="p-10 text-center text-slate-500">
                     Henüz kategori yok. Yeni kategori ekleyerek başlayın.
+                </div>
+            </div>
+
+            <!-- Users View -->
+            <div v-if="view === 'users'" class="glass rounded-3xl overflow-hidden border-none shadow-2xl">
+                <table class="w-full text-left">
+                    <thead class="bg-slate-800/50 border-b border-slate-700">
+                        <tr>
+                            <th class="p-6 font-semibold text-slate-300">Kullanıcı</th>
+                            <th class="p-6 font-semibold text-slate-300">E-posta</th>
+                            <th class="p-6 font-semibold text-slate-300">Kayıt Tarihi</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-700/50">
+                        <tr v-for="user in users" :key="user.id" class="hover:bg-slate-700/20 transition-all">
+                            <td class="p-6">
+                                <div class="flex items-center space-x-4">
+                                    <div
+                                        class="w-12 h-12 rounded-xl bg-emerald-600/20 text-emerald-300 flex items-center justify-center font-bold">
+                                        {{ user.name.slice(0, 1).toUpperCase() }}
+                                    </div>
+                                    <div>
+                                        <div class="font-bold text-slate-100">{{ user.name }}</div>
+                                        <div class="text-xs text-slate-500 font-mono">{{ user.id }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="p-6 text-slate-300">{{ user.email }}</td>
+                            <td class="p-6 text-slate-500">{{ formatDate(user.created_at) }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div v-if="users.length === 0" class="p-10 text-center text-slate-500">
+                    Henüz kayıtlı kullanıcı yok.
                 </div>
             </div>
         </main>
@@ -419,6 +475,7 @@
                     showCategoryModal: false,
                     products: [],
                     categories: [],
+                    users: [],
                     selectedImageFile: null,
                     selectedCategoryImageFile: null,
                     editingProductId: null,
@@ -444,6 +501,7 @@
             mounted() {
                 this.fetchCategories();
                 this.fetchProducts();
+                this.fetchUsers();
             },
             methods: {
                 async fetchProducts() {
@@ -470,6 +528,17 @@
                         }
                     } catch (error) {
                         console.error('Kategoriler yüklenemedi:', error);
+                    }
+                },
+                async fetchUsers() {
+                    try {
+                        const response = await fetch(`${API_BASE_URL}/auth/users`);
+                        if (!response.ok) {
+                            throw new Error(await this.getErrorMessage(response));
+                        }
+                        this.users = await response.json();
+                    } catch (error) {
+                        console.error('Kullanıcılar yüklenemedi:', error);
                     }
                 },
                 async saveProduct() {
@@ -728,6 +797,14 @@
                         return 'Admin panel backend adresine ulaşamıyor. Backend domaininde HTTPS/SSL açık olmalı ve canlı backend deploy edilmiş olmalı.';
                     }
                     return error.message;
+                },
+                formatDate(value) {
+                    if (!value) return '-';
+                    return new Date(value).toLocaleDateString('tr-TR', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    });
                 },
                 resetForm() {
                     this.selectedImageFile = null;
