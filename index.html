@@ -399,7 +399,8 @@
     <script>
         const { createApp } = Vue
         const API_HOST = 'kg1clqqc9zi1meq787vqdwi0.46.224.151.129.sslip.io'
-        const API_BASE_URL = `${window.location.protocol}//${API_HOST}`
+        const API_PROTOCOL = window.location.protocol === 'file:' ? 'http:' : window.location.protocol
+        const API_BASE_URL = `${API_PROTOCOL}//${API_HOST}`
 
         createApp({
             data() {
