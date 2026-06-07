@@ -398,7 +398,8 @@
 
     <script>
         const { createApp } = Vue
-        const API_BASE_URL = 'http://kg1clqqc9zi1meq787vqdwi0.46.224.151.129.sslip.io'
+        const API_HOST = 'kg1clqqc9zi1meq787vqdwi0.46.224.151.129.sslip.io'
+        const API_BASE_URL = `${window.location.protocol}//${API_HOST}`
 
         createApp({
             data() {
@@ -515,7 +516,7 @@
                         await this.fetchCategories();
                         this.closeCategoryModal();
                     } catch (error) {
-                        alert(`Kategori kaydedilirken bir hata oluştu: ${error.message}`);
+                        alert(`Kategori kaydedilirken bir hata oluştu: ${this.getNetworkErrorMessage(error)}`);
                     }
                 },
                 openNewCategoryModal() {
@@ -550,7 +551,7 @@
                             this.newProduct.product_type = this.newProduct.category_id;
                         }
                     } catch (error) {
-                        alert(`Kategori silinirken bir hata oluştu: ${error.message}`);
+                        alert(`Kategori silinirken bir hata oluştu: ${this.getNetworkErrorMessage(error)}`);
                     }
                 },
                 closeCategoryModal() {
@@ -644,6 +645,12 @@
                     } catch {
                         return text || `İstek başarısız oldu (${response.status})`;
                     }
+                },
+                getNetworkErrorMessage(error) {
+                    if (error.message === 'Failed to fetch') {
+                        return 'Admin panel backend adresine ulaşamıyor. Backend domaininde HTTPS/SSL açık olmalı ve canlı backend deploy edilmiş olmalı.';
+                    }
+                    return error.message;
                 },
                 resetForm() {
                     this.selectedImageFile = null;
