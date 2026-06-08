@@ -559,7 +559,7 @@
                                     <div class="font-bold text-slate-100">{{ category.name }}</div>
                                 </div>
                             </td>
-                            <td class="p-6 font-mono text-xs text-slate-500">{{ category.id }}</td>
+                            <td class="p-6 font-mono text-xs text-slate-500">{{ category.display_id }}</td>
                             <td class="p-6">
                                 <div class="flex items-center justify-end gap-3">
                                     <button @click="editCategory(category)"
@@ -803,6 +803,12 @@
                 this.fetchAIRecords();
             },
             methods: {
+                normalizeCategory(category) {
+                    return {
+                        ...category,
+                        display_id: category.name || category.id || '-'
+                    };
+                },
                 async fetchProducts() {
                     try {
                         const response = await fetch(`${API_BASE_URL}/products/`);
@@ -820,7 +826,7 @@
                         if (!response.ok) {
                             throw new Error(await response.text());
                         }
-                        this.categories = await response.json();
+                        this.categories = (await response.json()).map(this.normalizeCategory);
                         if (!this.newProduct.category_id && this.categories.length > 0) {
                             this.newProduct.category_id = this.categories[0].id;
                             this.newProduct.product_type = this.categories[0].id;
